@@ -1,64 +1,84 @@
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+import os
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
+import yaml
 
-@CrewBase
-class AutoContentCreator():
-    """AutoContentCreator crew"""
+def load_yaml(file_path):
+    here = os.path.dirname(__file__)
+    abs_path = os.path.join(here, file_path)
+    with open(abs_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+def make_agents():
+    agents_config = load_yaml("config/agents.yaml")
 
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
-    @agent
-    def researcher(self) -> Agent:
-        return Agent(
-            config=self.agents_config['researcher'], # type: ignore[index]
-            verbose=True
-        )
+    news_reporter = Agent(
+        role=agents_config["news_reporter"]["role"],
+        goal=agents_config["news_reporter"]["goal"],
+        backstory=agents_config["news_reporter"]["backstory"],
+        tools=[SerperDevTool()],
+        llm=agents_config["news_reporter"]["llm"],
+        verbose=True
+    )
 
-    @agent
-    def reporting_analyst(self) -> Agent:
-        return Agent(
-            config=self.agents_config['reporting_analyst'], # type: ignore[index]
-            verbose=True
-        )
+    news_copywriter = Agent(
+        role=agents_config["news_copywriter"]["role"],
+        goal=agents_config["news_copywriter"]["goal"],
+        backstory=agents_config["news_copywriter"]["backstory"],
+        llm=agents_config["news_copywriter"]["llm"],
+        verbose=True
+    )
 
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
-    @task
-    def research_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['research_task'], # type: ignore[index]
-        )
+    designer_agent = Agent(
+        role=agents_config["designer_agent"]["role"],
+        goal=agents_config["designer_agent"]["goal"],
+        backstory=agents_config["designer_agent"]["backstory"],
+        llm=agents_config["designer_agent"]["llm"],
+        verbose=True
+    )
 
-    @task
-    def reporting_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['reporting_task'], # type: ignore[index]
-            output_file='report.md'
-        )
+    return news_reporter, news_copywriter, designer_agent
 
-    @crew
-    def crew(self) -> Crew:
-        """Creates the AutoContentCreator crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
+def make_tasks(news_reporter, news_copywriter, designer_agent, field, websites, style_examples_text):
+    tasks_config = load_yaml("config/tasks.yaml")
 
-        return Crew(
-            agents=self.agents, # Automatically created by the @agent decorator
-            tasks=self.tasks, # Automatically created by the @task decorator
-            process=Process.sequential,
-            verbose=True,
-            # process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
-        )
+    fetch_news_desc = tasks_config["fetch_news"]["description"].format(
+        field=field, websites=", ".join(websites)
+    )
+    rewrite_article_desc = tasks_config["rewrite_article"]["description"].format(
+        style_examples=style_examples_text
+    )
+    gen_img_prompt_desc = tasks_config["generate_image_prompt"]["description"]
+
+    fetch_news = Task(
+        description=fetch_news_desc,
+        expected_output=tasks_config["fetch_news"]["expected_output"],
+        agent=news_reporter
+    )
+    rewrite_article = Task(
+        description=rewrite_article_desc,
+        expected_output=tasks_config["rewrite_article"]["expected_output"],
+        agent=news_copywriter,
+        context=[fetch_news]
+    )
+    generate_image_prompt = Task(
+        description=gen_img_prompt_desc,
+        expected_output=tasks_config["generate_image_prompt"]["expected_output"],
+        agent=designer_agent,
+        context=[rewrite_article]
+    )
+    return fetch_news, rewrite_article, generate_image_prompt
+
+def build_crew(field, websites, style_examples_text):
+    news_reporter, news_copywriter, designer_agent = make_agents()
+    fetch_news, rewrite_article, generate_image_prompt = make_tasks(
+        news_reporter, news_copywriter, designer_agent, field, websites, style_examples_text
+    )
+
+    crew = Crew(
+        agents=[news_reporter, news_copywriter, designer_agent],
+        tasks=[fetch_news, rewrite_article, generate_image_prompt],
+        process=Process.sequential,
+        verbose=True
+    )
+    return crew
