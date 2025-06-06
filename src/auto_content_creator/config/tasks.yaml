@@ -1,0 +1,65 @@
+fetch_news:
+  description: |
+    For each of these websites: {websites}
+    Perform a Google search using site search to find the latest news in the field of {field}.
+    ONLY select articles that are controversial, spark debate, or are highly attention-grabbing.
+    Criteria for selection:
+      - The headline uses strong or polarizing words
+      - The story is trending or widely discussed
+      - The topic is bold, unusual, or provokes strong reactions
+    For each website, output:
+      - title
+      - url
+      - summary
+      - main content
+      - a short sentence ("controversy_reason") explaining why this article is attention-grabbing/controversial.
+  expected_output: |
+    [
+      {
+        "website": "...",
+        "title": "...",
+        "url": "...",
+        "summary": "...",
+        "content": "...",
+        "controversy_reason": "..."
+      }
+      // one entry per website
+    ]
+  agent: news_reporter
+
+rewrite_article:
+  description: |
+    For EACH article below, rewrite it in Indonesian for Instagram.
+    Use the provided style examples as reference.
+    Create a catchy viral hook title and a concise, attention-grabbing caption following the IG style below:
+    {style_examples}
+    Format output as a list (one for each article).
+  expected_output: |
+    [
+      {
+        "website": "...",
+        "hook_title": "...",
+        "caption": "..."
+      }
+      // one per article
+    ]
+  agent: news_copywriter
+  context:
+    - fetch_news
+
+generate_image_prompt:
+  description: |
+    For EACH rewritten article, generate a creative, detailed image prompt for an AI illustration.
+    The prompt must reflect the story and be visually striking for Instagram.
+    Format output as a list (one for each article).
+  expected_output: |
+    [
+      {
+        "website": "...",
+        "image_prompt": "..."
+      }
+      // one per article
+    ]
+  agent: designer_agent
+  context:
+    - rewrite_article
