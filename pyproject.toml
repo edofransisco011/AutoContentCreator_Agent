@@ -11,9 +11,6 @@ dependencies = [
 [project.scripts]
 auto_content_creator = "auto_content_creator.main:run"
 run_crew = "auto_content_creator.main:run"
-train = "auto_content_creator.main:train"
-replay = "auto_content_creator.main:replay"
-test = "auto_content_creator.main:test"
 
 [build-system]
 requires = ["hatchling"]
