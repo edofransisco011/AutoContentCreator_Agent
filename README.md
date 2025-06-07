@@ -37,7 +37,7 @@ $ crewai run
 
 This command initializes the auto-content-creator Crew, assembling the agents and assigning them tasks as defined in your configuration.
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+This example, unmodified, will create per-website Markdown files (e.g., `website_news_post.md`) with the research output in the root folder.
 
 ## Understanding Your Crew
 
