@@ -1,6 +1,5 @@
 import os
 import yaml
-import json
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool, ScrapeWebsiteTool
 from auto_content_creator.tools.user_preference_tool import UserPreferenceTool
