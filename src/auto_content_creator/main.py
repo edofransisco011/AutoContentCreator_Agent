@@ -1,6 +1,7 @@
 import json
 import random
 import os
+import argparse
 from auto_content_creator.crew import build_crew
 
 def get_style_examples(style_json_path, n=2):
@@ -14,86 +15,54 @@ def get_style_examples(style_json_path, n=2):
     )
     return examples_text
 
-def parse_final_output(result):
-    # If it's a string, try to parse as JSON
-    if isinstance(result, str):
-        try:
-            result = json.loads(result)
-        except Exception:
-            pass
-
-    # If result is a dict and has only "Final Answer" or similar
-    if isinstance(result, dict):
-        # Check for a "Final Answer" key
-        if "Final Answer" in result:
-            result = result["Final Answer"]
-        else:
-            # Might be a dict of UUIDs, so flatten to list of values
-            all_values = []
-            for v in result.values():
-                if isinstance(v, list):
-                    all_values.extend(v)
-                else:
-                    all_values.append(v)
-            result = all_values
-
-    # If it's a list, return as-is
-    if isinstance(result, list):
-        return result
-    # If it's a single dict, wrap in list
-    elif isinstance(result, dict):
-        return [result]
-    # If it's just a string or other type, wrap in list for downstream code
-    else:
-        return [result]
-
-def save_outputs(parsed_results, output_dir):
+def save_output(result_json_string, website, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-    for idx, item in enumerate(parsed_results):
-        # Use site name if present, or index as fallback
-        site = item.get("website", f"site_{idx+1}") if isinstance(item, dict) else f"site_{idx+1}"
-        output_file = os.path.join(output_dir, f"{str(site).replace('.', '_')}_news_post.md")
-        with open(output_file, "w", encoding="utf-8") as f:
-            if isinstance(item, dict):
-                if "hook_title" in item:
-                    f.write(f"# {item['hook_title']}\n\n")
-                if "caption" in item:
-                    f.write(item['caption'] + "\n\n")
-                if "image_prompt" in item:
-                    f.write(f"**Image Prompt:**\n{item['image_prompt']}\n")
-                # Add more fields as needed
-            else:
-                # Just write the string
-                f.write(str(item))
-        print(f"Output saved to {output_file}")
+    
+    try:
+        final_data = json.loads(result_json_string)
+    except (json.JSONDecodeError, TypeError):
+        print(f"Could not parse JSON from result for {website}. Raw result: {result_json_string}")
+        final_data = {}
+
+    hook_title = final_data.get("hook_title", "No Title")
+    caption = final_data.get("caption", "No Caption")
+    image_prompt = final_data.get("image_prompt", "No Image Prompt")
+
+    safe_website_name = website.replace('https://', '').replace('www.', '').replace('/', '_').split('.')[0]
+    output_file = os.path.join(output_dir, f"{safe_website_name}_news_post.md")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(f"# {hook_title}\n\n")
+        f.write(f"{caption}\n\n")
+        f.write(f"**Image Prompt:**\n{image_prompt}\n")
+    
+    print(f"✅ Output for {website} saved to {output_file}")
+
 
 def run():
+    parser = argparse.ArgumentParser(description="Run the Auto Content Creator crew.")
+    parser.add_argument('--field', type=str, default="artificial intelligence", help='The field or topic for news gathering.')
+    parser.add_argument('--websites', nargs='+', default=["https://www.artificialintelligence-news.com/", "https://techcrunch.com/category/artificial-intelligence/"], help='A list of websites to search for news.')
+    args = parser.parse_args()
+
     here = os.path.dirname(__file__)
     style_examples_path = os.path.join(here, "data", "style_bank.json")
     examples_text = get_style_examples(style_examples_path, n=2)
+    output_dir = os.path.join(here, "..", "..", "output")
 
-    field = "artificial intelligence"
-    websites = [
-        "https://www.artificialintelligence-news.com/",
-        "https://techcrunch.com/category/artificial-intelligence/"
-    ]
+    for website in args.websites:
+        print(f"🚀 Starting crew for website: {website}")
+        
+        crew = build_crew(field=args.field, website=website, style_examples_text=examples_text)
+        
+        print("Running the Crew...")
+        result = crew.kickoff()
 
-    crew = build_crew(field=field, websites=websites, style_examples_text=examples_text)
-    print("Running the Crew...")
-    result = crew.kickoff(inputs={})
+        print("\n==== RAW CrewAI output ====\n")
+        print(result)
+        print("\n==========================\n")
 
-    print("\n==== RAW CrewAI output ====\n")
-    print(result)
-    print("\n==========================\n")
-
-    # Parse the output flexibly
-    parsed_results = parse_final_output(result)
-
-    print("Parsed output for Markdown export:")
-    print(parsed_results)
-
-    output_dir = os.path.join(here, "output")
-    save_outputs(parsed_results, output_dir)
+        save_output(result, website, output_dir)
 
 if __name__ == "__main__":
     run()
