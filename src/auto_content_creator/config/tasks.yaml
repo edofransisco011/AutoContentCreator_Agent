@@ -1,65 +1,69 @@
-fetch_news:
+find_article_urls:
   description: |
-    For each of these websites: {websites}
-    Perform a Google search using site search to find the latest news in the field of {field}.
-    ONLY select articles that are controversial, spark debate, or are highly attention-grabbing.
-    Criteria for selection:
-      - The headline uses strong or polarizing words
-      - The story is trending or widely discussed
-      - The topic is bold, unusual, or provokes strong reactions
-    For each website, output:
-      - title
-      - url
-      - summary
-      - main content
-      - a short sentence ("controversy_reason") explaining why this article is attention-grabbing/controversial.
+    Using the "Search the internet with Serper" tool, find the single most controversial or attention-grabbing news article about "{field}" from the following website: {website}.
+    Your search query should be formatted like this: `site:example.com {field}`.
+    Return only the URL of the single best article you find.
   expected_output: |
-    [
-      {
-        "website": "...",
-        "title": "...",
-        "url": "...",
-        "summary": "...",
-        "content": "...",
-        "controversy_reason": "..."
-      }
-      // one entry per website
-    ]
+    A string containing the single URL of the most relevant article.
+    Example: "https://www.some-website.com/news/article-title"
   agent: news_reporter
+
+scrape_article_content:
+  description: |
+    Using the URL provided in the context, use the ScrapeWebsiteTool to scrape the full main content of the article.
+  expected_output: |
+    A string containing the full, cleaned text content of the article.
+  agent: news_reporter
+  context:
+    - find_article_urls
 
 rewrite_article:
   description: |
-    For EACH article below, rewrite it in Indonesian for Instagram.
-    Use the provided style examples as reference.
-    Create a catchy viral hook title and a concise, attention-grabbing caption following the IG style below:
+    You are an Instagram copywriter. Your task is to rewrite the news article provided below into a catchy hook title and an engaging IG caption in Indonesian.
+
+    **STYLE EXAMPLES (FOR REFERENCE ONLY):**
+    ---
     {style_examples}
-    Format output as a list (one for each article).
+    ---
+
+    **SOURCE ARTICLE TO REWRITE:**
+    ---
+    {context}
+    ---
+
+    Output your work as a single JSON object with the keys "hook_title" and "caption".
   expected_output: |
-    [
-      {
-        "website": "...",
-        "hook_title": "...",
-        "caption": "..."
-      }
-      // one per article
-    ]
+    A single JSON object containing the rewritten content.
+    Example:
+    {{
+      "hook_title": "Judul Hook yang Menarik",
+      "caption": "Isi caption yang menarik dan informatif dalam Bahasa Indonesia."
+    }}
   agent: news_copywriter
   context:
-    - fetch_news
+    - scrape_article_content
 
 generate_image_prompt:
   description: |
-    For EACH rewritten article, generate a creative, detailed image prompt for an AI illustration.
-    The prompt must reflect the story and be visually striking for Instagram.
-    Format output as a list (one for each article).
+    You will be given a JSON object containing a "hook_title" and a "caption".
+
+    Your final task is to:
+    1. Create a detailed, creative image prompt based on the title and caption. The image must be a **square (1:1 aspect ratio)**.
+    2. Add this prompt to the JSON object you received, using the key "image_prompt".
+    3. Return the complete, final JSON object containing all three keys: "hook_title", "caption", and "image_prompt".
+
+    **JSON DATA FROM PREVIOUS TASK:**
+    ---
+    {context}
+    ---
   expected_output: |
-    [
-      {
-        "website": "...",
-        "image_prompt": "..."
-      }
-      // one per article
-    ]
+    A single, complete JSON object containing the original hook_title, caption, and the new image_prompt.
+    Example:
+    {{
+      "hook_title": "Judul Hook yang Menarik",
+      "caption": "Isi caption yang menarik...",
+      "image_prompt": "A photorealistic image of a futuristic robot..."
+    }}
   agent: designer_agent
   context:
     - rewrite_article
