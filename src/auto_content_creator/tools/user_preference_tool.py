@@ -12,7 +12,7 @@ class UserPreferenceTool(BaseTool):
         # Construct the path relative to this file's location
         here = os.path.dirname(__file__)
         # Go up two levels to the project root, then into the knowledge folder
-        knowledge_path = os.path.join(here, "..", "..", "knowledge", "user_preference.txt")
+        knowledge_path = os.path.join(here, "..", "..", "..", "knowledge", "user_preference.txt")
         
         try:
             with open(knowledge_path, "r", encoding="utf-8") as f:

@@ -13,6 +13,8 @@ news_copywriter:
   goal: Rewrite provided news articles into high-engagement Instagram hooks and captions, using the given style examples as writing references.
   backstory: >
     Social content specialist skilled at transforming news into viral, on-brand IG content while matching target writing styles.
+  tools:
+    - UserPreferenceTool
   llm: openrouter/nvidia/llama-3.3-nemotron-super-49b-v1:free
 
 designer_agent:
