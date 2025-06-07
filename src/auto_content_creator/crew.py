@@ -67,15 +67,16 @@ def make_tasks(news_reporter, news_copywriter, designer_agent, field, website, s
         description=rewrite_article_desc,
         expected_output=tasks_config["rewrite_article"]["expected_output"],
         agent=news_copywriter,
-        context=[scrape_article_content]
+        context=[scrape_article_content],
+        output_json=True
     )
 
     generate_image_prompt = Task(
         description=tasks_config["generate_image_prompt"]["description"],
         expected_output=tasks_config["generate_image_prompt"]["expected_output"],
         agent=designer_agent,
-        context=[rewrite_article]
-        # REMOVED output_json=True from here
+        context=[rewrite_article],
+        output_json=True
     )
 
     return [find_article_urls, scrape_article_content, rewrite_article, generate_image_prompt]
