@@ -3,6 +3,7 @@ import yaml
 import json
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool, ScrapeWebsiteTool
+from auto_content_creator.tools.user_preference_tool import UserPreferenceTool
 
 def load_yaml(file_path):
     here = os.path.dirname(__file__)
@@ -26,6 +27,7 @@ def make_agents():
         role=agents_config["news_copywriter"]["role"],
         goal=agents_config["news_copywriter"]["goal"],
         backstory=agents_config["news_copywriter"]["backstory"],
+        tools=[UserPreferenceTool()],
         llm=agents_config["news_copywriter"]["llm"],
         verbose=True
     )
